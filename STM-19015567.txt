@@ -1,0 +1,45 @@
+#include "stm32f4xx.h"
+
+void ADC_init(void);
+void analog_reference(int reference);
+int ADC_read(int pin);
+
+int ADCdata;
+long Output;
+int reference = 5;
+
+int main(void) {
+    ADC_init();
+
+    while (1) {
+        analog_reference(5);
+		Output = ADCdata * reference / 1024;
+    }
+}
+
+void ADC_init(void) {
+ RCC->AHB1ENR |= (1<<0); // Enable clock source for PORT A
+    GPIOA->MODER |= (GPIO_MODER_MODER0 | GPIO_MODER_MODER1 | GPIO_MODER_MODER2); // Set PA0, PA1, PA2 as analog mode
+
+ 	RCC->APB2ENR |= (1<<8);  // Enable clock source for ADC1
+	ADC1->CR1 |= (1<<24);  //  set 10 bit ADC
+	ADC1->CR2 &= ~(1<<0);  //  ADC disable
+	ADC1->SQR3 |= 0; // Enable ADC 0th Channel
+	ADC1->CR2 |=  (1<<0);  // ADC ON
+}
+
+void analog_reference(int reference) {
+    ADC1->CR2 |= ADC_CR2_SWSTART; // Start conversion
+    ADCdata = ADC_read(2); // Read from PA0
+    
+}
+
+int ADC_read(int pin) {
+    ADC1->SQR3 = pin & 0x0F; // Select the channel in the sequence
+
+    ADC1->CR2 |= ADC_CR2_SWSTART; // Start conversion
+
+    while (!(ADC1->SR & ADC_SR_EOC)){}
+
+    return ADC1->DR; // Return the converted value
+}
